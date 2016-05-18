@@ -19,4 +19,10 @@ object IDXReader {
 
     return new IdxBaseDatasetIterator(batch, numOfExamples, fetcher)
   }
+
+  def read(attributeFile: String, labelFile: String, batch: Int) : DataSetIterator={
+    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile)
+
+    return new IdxBaseDatasetIterator(batch, fetcher.totalExamples(), fetcher)
+  }
 }
