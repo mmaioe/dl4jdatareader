@@ -11,7 +11,7 @@ import java.io.PrintWriter;
  *
  * Created by ito_m on 5/17/16.
  */
-public class MINISTConverter {
+public class MNISTConverter {
     public static void read(String attributeFile, String labelFile) throws Exception{
         DataInputStream xStream = IOUtils.getDataInputStream(attributeFile);
         DataInputStream yStream = IOUtils.getDataInputStream(labelFile);
