@@ -1,6 +1,7 @@
 package mmaioe.com.dl4jdatasetiterator.idx;
 
 import edu.stanford.nlp.io.IOUtils;
+import mmaioe.com.featureextraction.FeatureExtraction;
 import org.deeplearning4j.datasets.fetchers.BaseDataFetcher;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
@@ -22,12 +23,13 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
     private DataInputStream yStream;
     private int xRows;
     private int xColumns;
-
-    public IdxBaseDataFetcher(String attributeFile, String labelFile) throws IOException {
-        init(attributeFile,labelFile);
+    private FeatureExtraction featureExtraction = null;
+    public IdxBaseDataFetcher(String attributeFile, String labelFile,int inputColumn, int numOutcomes,FeatureExtraction featureExtraction) throws IOException {
+        init(attributeFile,labelFile,inputColumn,numOutcomes);
+        this.featureExtraction = featureExtraction;
     }
 
-    public void init(String attributeFile, String labelFile) throws IOException{
+    public void init(String attributeFile, String labelFile,int inputColumn, int numOutcomes) throws IOException{
         this.attributeFile = attributeFile;
         this.labelFile = labelFile;
         xStream = IOUtils.getDataInputStream(attributeFile);
@@ -45,8 +47,8 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
         xColumns = xStream.readInt();
 
         this.totalExamples = yNumLabels;
-        this.inputColumns = xRows*xColumns;
-        this.numOutcomes = 10;
+        this.inputColumns = inputColumn;
+        this.numOutcomes = numOutcomes;
     }
 
     public INDArray toOneOfK(int label){
@@ -72,6 +74,10 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
                     feature.putScalar(j,xStream.readUnsignedByte()/255.0);
                 }
 
+                if(this.featureExtraction != null){
+                    feature = this.featureExtraction.encode(feature);
+                }
+
                 dataSet.add(
                         new DataSet(
                                 feature, //
@@ -92,7 +98,7 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
         super.reset();
         try {
             this.close();
-            this.init(attributeFile,labelFile);
+            this.init(attributeFile,labelFile,this.inputColumns,this.numOutcomes);
         }catch(Exception e){
             e.printStackTrace();
         }

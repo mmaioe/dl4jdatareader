@@ -1,6 +1,7 @@
 package mmaioe.com.dl4jdatareader.idx
 
-import mmaioe.com.dl4jdatasetiterator.idx.{IdxBaseDatasetIterator, IdxBaseDataFetcher}
+import mmaioe.com.dl4jdatasetiterator.idx.{IdxBaseDataFetcherIdentical, IdxBaseDatasetIterator, IdxBaseDataFetcher}
+import mmaioe.com.featureextraction.FeatureExtraction
 import org.deeplearning4j.datasets.iterator.DataSetIterator
 
 /**
@@ -8,20 +9,26 @@ import org.deeplearning4j.datasets.iterator.DataSetIterator
  */
 object IDXReader {
 
-  def read(attributeFile: String, labelFile: String) : DataSetIterator={
-    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile)
-
-    return new IdxBaseDatasetIterator(1, fetcher.totalExamples(), fetcher)
-  }
-
-  def read(attributeFile: String, labelFile: String, batch: Int, numOfExamples: Int) : DataSetIterator={
-    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile)
+  def read(attributeFile: String, labelFile: String, batch: Int, numOfExamples: Int,inputColumn: Int, numOutcomes: Int, featureExtraction:FeatureExtraction) : DataSetIterator={
+    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile, inputColumn, numOutcomes,featureExtraction)
 
     return new IdxBaseDatasetIterator(batch, numOfExamples, fetcher)
   }
 
-  def read(attributeFile: String, labelFile: String, batch: Int) : DataSetIterator={
-    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile)
+  def read(attributeFile: String, labelFile: String, batch: Int, inputColumn: Int, numOutcomes: Int, featureExtraction:FeatureExtraction) : DataSetIterator={
+    val fetcher: IdxBaseDataFetcher = new IdxBaseDataFetcher(attributeFile,labelFile,inputColumn,numOutcomes,featureExtraction)
+
+    return new IdxBaseDatasetIterator(batch, fetcher.totalExamples(), fetcher)
+  }
+
+  def readIdentical(attributeFile: String, labelFile: String, batch: Int, numOfExamples: Int,inputColumn: Int, numOutcomes: Int, featureExtraction:FeatureExtraction) : DataSetIterator={
+    val fetcher: IdxBaseDataFetcherIdentical = new IdxBaseDataFetcherIdentical(attributeFile,labelFile, inputColumn, numOutcomes,featureExtraction)
+
+    return new IdxBaseDatasetIterator(batch, numOfExamples, fetcher)
+  }
+
+  def readIdentical(attributeFile: String, labelFile: String, batch: Int, inputColumn: Int, numOutcomes: Int, featureExtraction:FeatureExtraction) : DataSetIterator={
+    val fetcher: IdxBaseDataFetcherIdentical = new IdxBaseDataFetcherIdentical(attributeFile,labelFile,inputColumn,numOutcomes,featureExtraction)
 
     return new IdxBaseDatasetIterator(batch, fetcher.totalExamples(), fetcher)
   }

@@ -23,18 +23,14 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
     private DataInputStream yStream;
     private int xRows;
     private int xColumns;
-    private FeatureExtraction featureExtraction;
+    private FeatureExtraction featureExtraction = null;
 
-    public IdxBaseDataFetcherIdentical(String attributeFile, String labelFile,int inputColumns, int numOutcomes) throws IOException {
-        init(attributeFile,labelFile,inputColumns,numOutcomes);
-    }
-
-    public IdxBaseDataFetcherIdentical(String attributeFile, String labelFile, int inputColumns, int numOutcomes,FeatureExtraction featureExtraction) throws IOException {
-        this(attributeFile,labelFile,inputColumns,numOutcomes);
+    public IdxBaseDataFetcherIdentical(String attributeFile, String labelFile,int inputColumn, int numOutcomes,FeatureExtraction featureExtraction) throws IOException {
+        init(attributeFile,labelFile,inputColumn,numOutcomes);
         this.featureExtraction = featureExtraction;
     }
 
-    public void init(String attributeFile, String labelFile, int inputColumns, int numOutcomes) throws IOException{
+    public void init(String attributeFile, String labelFile,int inputColumn, int numOutcomes) throws IOException{
         this.attributeFile = attributeFile;
         this.labelFile = labelFile;
         xStream = IOUtils.getDataInputStream(attributeFile);
@@ -52,8 +48,14 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
         xColumns = xStream.readInt();
 
         this.totalExamples = yNumLabels;
-        this.inputColumns = inputColumns;
-        this.numOutcomes = inputColumns;
+        this.inputColumns = inputColumn;
+        this.numOutcomes = numOutcomes;
+    }
+
+    public INDArray toOneOfK(int label){
+        int[] nums = new int[numOutcomes];
+        nums[label] = 1;
+        return ArrayUtil.toNDArray(nums);
     }
 
     @Override
@@ -73,13 +75,15 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
                     feature.putScalar(j,xStream.readUnsignedByte()/255.0);
                 }
 
-                int unsingedByte = yStream.readUnsignedByte();
+                if(this.featureExtraction != null){
+                    feature = this.featureExtraction.encode(feature);
+                }
 
-                System.out.println("Identical learning:"+unsingedByte);
                 dataSet.add(
                         new DataSet(
                                 feature, //
-                                feature //
+//                                toOneOfK(yStream.readUnsignedByte()) //
+                                feature
                         )
                 );
             }
