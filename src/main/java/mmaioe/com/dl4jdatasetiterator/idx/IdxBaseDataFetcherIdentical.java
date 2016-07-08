@@ -1,15 +1,16 @@
 package mmaioe.com.dl4jdatasetiterator.idx;
 
+import com.google.common.primitives.Doubles;
 import edu.stanford.nlp.io.IOUtils;
 import mmaioe.com.featureextraction.FeatureExtraction;
+import mmaioe.com.featureextraction.topology.PersistentHomology;
 import org.deeplearning4j.datasets.fetchers.BaseDataFetcher;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.util.ArrayUtil;
 
-import java.io.DataInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,17 +25,25 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
     private int xRows;
     private int xColumns;
     private FeatureExtraction featureExtraction = null;
+    private boolean includeBetti;
+    private String bettiFile;
+    BufferedReader bettiReader;
 
-    public IdxBaseDataFetcherIdentical(String attributeFile, String labelFile,int inputColumn, int numOutcomes,FeatureExtraction featureExtraction) throws IOException {
-        init(attributeFile,labelFile,inputColumn,numOutcomes);
+    private static int fetchCount = 0;
+
+    public IdxBaseDataFetcherIdentical(String attributeFile, String labelFile,int inputColumn, int numOutcomes,FeatureExtraction featureExtraction, boolean includeBetti, String bettiFile) throws IOException {
+        init(attributeFile,labelFile,inputColumn,numOutcomes,includeBetti, bettiFile);
         this.featureExtraction = featureExtraction;
     }
 
-    public void init(String attributeFile, String labelFile,int inputColumn, int numOutcomes) throws IOException{
+    public void init(String attributeFile, String labelFile,int inputColumn, int numOutcomes,boolean includeBetti, String bettiFile) throws IOException{
         this.attributeFile = attributeFile;
         this.labelFile = labelFile;
+        this.bettiFile = bettiFile;
         xStream = IOUtils.getDataInputStream(attributeFile);
         yStream = IOUtils.getDataInputStream(labelFile);
+        File file = new File(this.bettiFile);
+        bettiReader = new BufferedReader(new FileReader(file));
 
         int xMagic = xStream.readInt();
         if (xMagic != 2051) throw new RuntimeException("Bad format of xStream");
@@ -50,6 +59,7 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
         this.totalExamples = yNumLabels;
         this.inputColumns = inputColumn;
         this.numOutcomes = numOutcomes;
+        this.includeBetti = includeBetti;
     }
 
     public INDArray toOneOfK(int label){
@@ -71,25 +81,68 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
             for (int i = from; i < to; i++) {
                 INDArray feature = Nd4j.create(1, xRows * xColumns);
 
+                // 1. Add Row feature
+                List<List<Double>> pointCloud = new ArrayList<List<Double>>();
+
+                int x = 0;
+                int y = 0;
                 for (int j = 0; j < xRows * xColumns; j++) {
-                    feature.putScalar(j,xStream.readUnsignedByte()/255.0);
+                    int byteValue = xStream.readUnsignedByte();
+                    if(byteValue > 0){
+                        pointCloud.add(Doubles.asList(new double[]{x, y}));
+                    }
+
+                    feature.putScalar(j,byteValue/255.0);
+
+                    x++;
+                    if(j % xColumns == 0){
+                        x = 0;
+                        y++;
+                    }
                 }
 
                 if(this.featureExtraction != null){
                     feature = this.featureExtraction.encode(feature);
                 }
 
+                INDArray newFeature = feature;
+                if(includeBetti) {
+                    int dimension = 2;
+                    newFeature = Nd4j.create(1, xRows * xColumns + dimension);
+                    for (int j = 0; j < xRows * xColumns; j++) {
+                        newFeature.putScalar(j, feature.getDouble(j));
+                    }
+
+//                    PersistentHomology homology = new PersistentHomology(pointCloud);
+//                    int[] bettiNumbers = homology.getBettiNumbers(dimension);
+                    String[] bettiNumbers = bettiReader.readLine().split(",");
+
+                    System.out.println("Betti numbers:" + bettiNumbers.length + " shape:" + (xRows * xColumns) + " , dimension:" + dimension);
+                    for (int j = 0; j < dimension; j++) {
+                        if (j < bettiNumbers.length) {
+                            System.out.println(" [" + j + "]=" + Double.parseDouble(bettiNumbers[j]) / (double) (xRows * xColumns));
+                            newFeature.putScalar(xRows * xColumns + j, Double.parseDouble(bettiNumbers[j]) / (double) (xRows * xColumns));
+                        } else {
+                            newFeature.putScalar(xRows * xColumns + j, 0);
+                        }
+                    }
+                }
+
                 dataSet.add(
                         new DataSet(
-                                feature, //
+                                newFeature, //
 //                                toOneOfK(yStream.readUnsignedByte()) //
-                                feature
+                                newFeature
                         )
                 );
             }
         }catch(Exception e){
             e.printStackTrace();
         }
+
+        fetchCount++;
+
+        System.out.println("fetch count : "+fetchCount);
 
         initializeCurrFromList(dataSet);
         cursor += numExamples;
@@ -100,7 +153,7 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
         super.reset();
         try {
             this.close();
-            this.init(attributeFile,labelFile,this.inputColumns,this.numOutcomes);
+            this.init(attributeFile,labelFile,this.inputColumns,this.numOutcomes,this.includeBetti,this.bettiFile);
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -109,5 +162,6 @@ public class IdxBaseDataFetcherIdentical extends BaseDataFetcher {
     public void close() throws IOException {
         xStream.close();
         yStream.close();
+        bettiReader.close();
     }
 }
