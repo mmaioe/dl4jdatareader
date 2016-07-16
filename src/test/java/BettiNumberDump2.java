@@ -17,7 +17,7 @@ public class BettiNumberDump2 {
         int max_dimension = 3;
         for(int i=2;i<=max_dimension;i++) {
             String bettiFile_train = "/Users/maoito/myProject/tensorflow/MNIST_data/betti_train_"+i+"_2.txt";
-            BettiNumberReader.writeTo(attributeFIle_train, i, bettiFile_train);
+            BettiNumberReader.writeTo(attributeFIle_train,  (int)(Math.sqrt(28*28)),i, bettiFile_train,0,100);
         }
 
 //        System.out.println(Arrays.toString(new int[]{1,2}));

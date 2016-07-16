@@ -39,9 +39,10 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
         this.bettiFile = bettiFile;
         xStream = IOUtils.getDataInputStream(attributeFile);
         yStream = IOUtils.getDataInputStream(labelFile);
-        File file = new File(this.bettiFile);
-        bettiReader = new BufferedReader(new FileReader(file));
-
+        if(includeBetti) {
+            File file = new File(this.bettiFile);
+            bettiReader = new BufferedReader(new FileReader(file));
+        }
         int xMagic = xStream.readInt();
         if (xMagic != 2051) throw new RuntimeException("Bad format of xStream");
         int yMagic = yStream.readInt();
@@ -151,6 +152,6 @@ public class IdxBaseDataFetcher extends BaseDataFetcher {
     public void close() throws IOException {
         xStream.close();
         yStream.close();
-        bettiReader.close();
+        if(includeBetti) bettiReader.close();
     }
 }
